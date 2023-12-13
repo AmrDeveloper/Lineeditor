@@ -12,6 +12,7 @@ use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
 use crate::style::Style;
 use crate::Painter;
+use crate::Prompt;
 
 /// A Result can return from`LineEditor::read_line()`
 #[derive(Debug)]
@@ -38,6 +39,7 @@ enum EventStatus {
 
 /// Line Editor Engine
 pub struct LineEditor {
+    prompt: Box<dyn Prompt>,
     editor: Editor,
     painter: Painter,
 
@@ -49,8 +51,9 @@ pub struct LineEditor {
 impl LineEditor {
     /// Create new instance of LineEditor with Prompt
     #[must_use]
-    pub fn new() -> Self {
+    pub fn new(prompt: Box<dyn Prompt>) -> Self {
         LineEditor {
+            prompt,
             editor: Editor::default(),
             painter: Painter::default(),
 
@@ -76,6 +79,12 @@ impl LineEditor {
     fn read_line_helper(&mut self) -> Result<LineEditorResult> {
         let mut lineeditor_events: Vec<LineEditorEvent> = vec![];
 
+        let prompt_buffer = self.prompt.prompt();
+        let promot_len = prompt_buffer.len() as u16;
+
+        self.painter.set_buffer_column_start(promot_len);
+        self.painter.render_promot_buffer(prompt_buffer)?;
+
         loop {
             loop {
                 if let Event::Key(key_event) = event::read()? {
@@ -90,18 +99,6 @@ impl LineEditor {
                                 lineeditor_events.push(edit_command);
                                 break;
                             }
-                        }
-                        KeyCode::Left => {
-                            lineeditor_events.push(LineEditorEvent::SelectLeft);
-                            break;
-                        }
-                        KeyCode::Up => {
-                            lineeditor_events.push(LineEditorEvent::Left);
-                            break;
-                        }
-                        KeyCode::Right => {
-                            lineeditor_events.push(LineEditorEvent::SelectRight);
-                            break;
                         }
                         _ => {
                             break;
@@ -126,7 +123,8 @@ impl LineEditor {
             self.apply_visual_selection();
 
             // Render the current buffer with style
-            self.painter.render_buffer(self.editor.styled_buffer())?;
+            self.painter
+                .render_line_buffer(self.editor.styled_buffer())?;
         }
     }
 

@@ -28,7 +28,8 @@ impl Default for Painter {
 }
 
 impl Painter {
-    pub fn render_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
+    /// Render the current line styled buffer
+    pub fn render_line_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
         let buffer_position = buffer.position() as u16;
 
         // Reset cursor position
@@ -42,11 +43,17 @@ impl Painter {
         self.render_styled_buffer(buffer)?;
 
         // Move the cursor to the current insertion position
-        self.stdout.queue(cursor::MoveToColumn(
-            self.buffer_column_start + buffer_position,
-        ))?;
+        let move_to_position = self.buffer_column_start + buffer_position;
+        self.stdout.queue(cursor::MoveToColumn(move_to_position))?;
 
         // Flush the output stream
+        self.stdout.flush()?;
+        Ok(())
+    }
+
+    /// Render the prompt styled buffer
+    pub fn render_promot_buffer(&mut self, prompt: &StyledBuffer) -> Result<()> {
+        self.render_styled_buffer(prompt)?;
         self.stdout.flush()?;
         Ok(())
     }
@@ -80,6 +87,7 @@ impl Painter {
         Ok(())
     }
 
+    /// Set the current line start position, after promot
     pub fn set_buffer_column_start(&mut self, start: u16) {
         self.buffer_column_start = start;
     }
