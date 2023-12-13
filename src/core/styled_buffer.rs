@@ -95,7 +95,7 @@ impl StyledBuffer {
     pub fn buffer(&mut self) -> &Vec<char> {
         &self.buffer
     }
-    
+
     /// Get char at position
     pub fn char_at(&self, position: usize) -> Option<char> {
         Some(self.buffer[position])
@@ -104,6 +104,19 @@ impl StyledBuffer {
     /// Get current Styles
     pub fn styles(&self) -> &Vec<Style> {
         &self.styles
+    }
+
+    /// Set style for one character
+    pub fn style_char(&mut self, position: usize, style: Style) {
+        self.styles[position] = style;
+    }
+
+    /// Set style for a range of characters
+    pub fn style_range(&mut self, start: usize, end: usize, style: Style) {
+        let max = std::cmp::min(end, self.styles.len() - 1);
+        for i in start..max {
+            self.styles[i] = style.clone();
+        }
     }
 
     /// Reset all styles to the default one

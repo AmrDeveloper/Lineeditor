@@ -10,6 +10,7 @@ use crossterm::terminal;
 use crate::editor::Editor;
 use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
+use crate::style::Style;
 use crate::Painter;
 
 /// A Result can return from`LineEditor::read_line()`
@@ -39,6 +40,10 @@ enum EventStatus {
 pub struct LineEditor {
     editor: Editor,
     painter: Painter,
+
+    selection_style: Option<Style>,
+    selected_start: u16,
+    selected_end: u16,
 }
 
 impl LineEditor {
@@ -48,6 +53,10 @@ impl LineEditor {
         LineEditor {
             editor: Editor::default(),
             painter: Painter::default(),
+
+            selection_style: None,
+            selected_start: 0,
+            selected_end: 0,
         }
     }
 
@@ -82,6 +91,18 @@ impl LineEditor {
                                 break;
                             }
                         }
+                        KeyCode::Left => {
+                            lineeditor_events.push(LineEditorEvent::SelectLeft);
+                            break;
+                        }
+                        KeyCode::Up => {
+                            lineeditor_events.push(LineEditorEvent::Left);
+                            break;
+                        }
+                        KeyCode::Right => {
+                            lineeditor_events.push(LineEditorEvent::SelectRight);
+                            break;
+                        }
                         _ => {
                             break;
                         }
@@ -98,8 +119,14 @@ impl LineEditor {
                 }
             }
 
+            // Reset styled buffer styles
+            self.editor.styled_buffer().reset_styles();
+
+            // Apply visual selection
+            self.apply_visual_selection();
+
             // Render the current buffer with style
-            self.painter.repaint_buffer(&self.editor.styled_buffer())?;
+            self.painter.render_buffer(self.editor.styled_buffer())?;
         }
     }
 
@@ -110,22 +137,65 @@ impl LineEditor {
                 for command in commands {
                     self.editor.run_edit_commands(command);
                 }
+                self.reset_selection_range();
                 Ok(EventStatus::Handled)
             }
             LineEditorEvent::Left => {
                 self.editor.run_edit_commands(&EditCommand::MoveLeftChar);
+                self.reset_selection_range();
                 Ok(EventStatus::Handled)
             }
             LineEditorEvent::Right => {
                 self.editor.run_edit_commands(&EditCommand::MoveRightChar);
+                self.reset_selection_range();
                 Ok(EventStatus::Handled)
             }
             LineEditorEvent::Enter => {
                 let buffer = self.editor.styled_buffer().buffer().iter().collect();
+                self.reset_selection_range();
                 Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
+            }
+            LineEditorEvent::SelectLeft => {
+                if self.selected_end < 1 {
+                    Ok(EventStatus::Inapplicable)
+                } else {
+                    self.selected_end -= 1;
+                    Ok(EventStatus::Handled)
+                }
+            }
+            LineEditorEvent::SelectRight => {
+                if self.selected_end as usize >= self.editor.styled_buffer().len() {
+                    Ok(EventStatus::Inapplicable)
+                } else {
+                    self.selected_end += 1;
+                    Ok(EventStatus::Handled)
+                }
             }
             _ => Ok(EventStatus::Inapplicable),
         }
+    }
+
+    /// Apply visual selection on the current styled buffer
+    fn apply_visual_selection(&mut self) {
+        if self.selected_start == self.selected_end {
+            return;
+        }
+
+        // Apply visual selection style if it not None
+        if let Some(style) = &self.selection_style {
+            let styled_buffer = self.editor.styled_buffer();
+            // Handle From and To, so we allow select from any direction
+            let from = usize::min(self.selected_start.into(), self.selected_end.into());
+            let to = usize::max(self.selected_start.into(), self.selected_end.into());
+            styled_buffer.style_range(from, to, style.clone());
+        }
+    }
+
+    /// Reset selection start and end to be the current cursor position
+    fn reset_selection_range(&mut self) {
+        let position = self.editor.styled_buffer().position() as u16;
+        self.selected_start = position;
+        self.selected_end = position;
     }
 
     /// Get the current Editor

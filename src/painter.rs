@@ -28,7 +28,7 @@ impl Default for Painter {
 }
 
 impl Painter {
-    pub fn repaint_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
+    pub fn render_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
         let buffer_position = buffer.position() as u16;
 
         // Reset cursor position

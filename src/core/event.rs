@@ -34,7 +34,7 @@ pub enum EditCommand {
     Clear,
 }
 
-/// Reedline supported actions.
+/// LineEditor supported actions.
 #[derive(Clone)]
 pub enum LineEditorEvent {
     /// No op event
@@ -63,4 +63,10 @@ pub enum LineEditorEvent {
 
     /// Move left to the next column, or completion entry
     Left,
+
+    /// Select one character to the right
+    SelectRight,
+
+    /// Select one character to the left
+    SelectLeft,
 }
