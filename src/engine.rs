@@ -10,6 +10,8 @@ use crossterm::terminal;
 use crate::editor::Editor;
 use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
+use crate::keybindings::KeyCombination;
+use crate::keybindings::Keybindings;
 use crate::style::Style;
 use crate::Painter;
 use crate::Prompt;
@@ -42,6 +44,7 @@ pub struct LineEditor {
     prompt: Box<dyn Prompt>,
     editor: Editor,
     painter: Painter,
+    keybindings: Keybindings,
 
     selection_style: Option<Style>,
     selected_start: u16,
@@ -56,6 +59,8 @@ impl LineEditor {
             prompt,
             editor: Editor::default(),
             painter: Painter::default(),
+
+            keybindings: Keybindings::default(),
 
             selection_style: None,
             selected_start: 0,
@@ -99,9 +104,19 @@ impl LineEditor {
                                 lineeditor_events.push(edit_command);
                                 break;
                             }
+
+                            let key_combination = KeyCombination::from(key_event);
+                            if let Some(command) = self.keybindings.find_binding(key_combination) {
+                                lineeditor_events.push(command);
+                                break;
+                            }
                         }
                         _ => {
-                            break;
+                            let key_combination = KeyCombination::from(key_event);
+                            if let Some(command) = self.keybindings.find_binding(key_combination) {
+                                lineeditor_events.push(command);
+                                break;
+                            }
                         }
                     }
                 }
@@ -162,7 +177,7 @@ impl LineEditor {
                 }
             }
             LineEditorEvent::SelectRight => {
-                if self.selected_end as usize >= self.editor.styled_buffer().len() {
+                if self.selected_end as usize > self.editor.styled_buffer().len() {
                     Ok(EventStatus::Inapplicable)
                 } else {
                     self.selected_end += 1;
@@ -196,8 +211,18 @@ impl LineEditor {
         self.selected_end = position;
     }
 
+    /// Set style for visual selection or NONE to clear it
+    pub fn set_visual_selection_style(&mut self, style: Option<Style>) {
+        self.selection_style = style;
+    }
+
     /// Get the current Editor
     pub fn editor(&mut self) -> &mut Editor {
         &mut self.editor
+    }
+
+    /// Get the current Keybindings
+    pub fn keybinding(&mut self) -> &mut Keybindings {
+        &mut self.keybindings
     }
 }

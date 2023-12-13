@@ -1,6 +1,7 @@
 mod core;
 pub use core::editor;
 pub use core::event;
+pub use core::keybindings;
 pub use core::style;
 pub use core::styled_buffer;
 

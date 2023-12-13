@@ -113,7 +113,7 @@ impl StyledBuffer {
 
     /// Set style for a range of characters
     pub fn style_range(&mut self, start: usize, end: usize, style: Style) {
-        let max = std::cmp::min(end, self.styles.len() - 1);
+        let max = std::cmp::min(end, self.styles.len());
         for i in start..max {
             self.styles[i] = style.clone();
         }
