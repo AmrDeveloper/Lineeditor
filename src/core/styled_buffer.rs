@@ -91,6 +91,14 @@ impl StyledBuffer {
         }
     }
 
+    /// Deletes range of characters and styles from buffer
+    pub fn delete_range(&mut self, from: usize, to: usize) {
+        if to <= self.len() {
+            self.buffer.drain(from..to);
+            self.styles.drain(from..to);
+        }
+    }
+
     /// Get current Buffer
     pub fn buffer(&mut self) -> &Vec<char> {
         &self.buffer

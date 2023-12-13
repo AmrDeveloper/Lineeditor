@@ -30,6 +30,9 @@ pub enum EditCommand {
     /// Delete in-place from the current insertion point
     Delete,
 
+    /// Delete in-place the current selected range
+    DeleteSelected(usize, usize),
+
     /// Clear the current buffer
     Clear,
 }
@@ -69,4 +72,9 @@ pub enum LineEditorEvent {
 
     /// Select one character to the left
     SelectLeft,
+    /// Delete char from the left or delete selected range
+    Backspace,
+
+    /// Delete char from the right or delete selected range
+    Delete,
 }

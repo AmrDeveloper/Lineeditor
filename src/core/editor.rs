@@ -33,6 +33,7 @@ impl Editor {
             EditCommand::InsertString(s) => self.buffer.insert_string(s),
             EditCommand::Backspace => self.buffer.delete_left_char(),
             EditCommand::Delete => self.buffer.delete_right_char(),
+            EditCommand::DeleteSelected(from, to) => self.buffer.delete_range(*from, *to),
             EditCommand::Clear => self.buffer.clear(),
         }
     }

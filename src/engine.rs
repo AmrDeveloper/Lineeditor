@@ -153,6 +153,11 @@ impl LineEditor {
                 self.reset_selection_range();
                 Ok(EventStatus::Handled)
             }
+            LineEditorEvent::Enter => {
+                let buffer = self.editor.styled_buffer().buffer().iter().collect();
+                self.reset_selection_range();
+                Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
+            }
             LineEditorEvent::Left => {
                 self.editor.run_edit_commands(&EditCommand::MoveLeftChar);
                 self.reset_selection_range();
@@ -163,10 +168,29 @@ impl LineEditor {
                 self.reset_selection_range();
                 Ok(EventStatus::Handled)
             }
-            LineEditorEvent::Enter => {
-                let buffer = self.editor.styled_buffer().buffer().iter().collect();
-                self.reset_selection_range();
-                Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
+            LineEditorEvent::Delete => {
+                if self.selected_start != self.selected_end {
+                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
+                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
+                    let delete_selection = EditCommand::DeleteSelected(from, to);
+                    self.editor.run_edit_commands(&delete_selection);
+                    self.editor.styled_buffer().set_position(from);
+                } else {
+                    self.editor.run_edit_commands(&EditCommand::Delete)
+                }
+                Ok(EventStatus::Handled)
+            }
+            LineEditorEvent::Backspace => {
+                if self.selected_start != self.selected_end {
+                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
+                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
+                    let delete_selection = EditCommand::DeleteSelected(from, to);
+                    self.editor.run_edit_commands(&delete_selection);
+                    self.editor.styled_buffer().set_position(from);
+                } else {
+                    self.editor.run_edit_commands(&EditCommand::Backspace)
+                }
+                Ok(EventStatus::Handled)
             }
             LineEditorEvent::SelectLeft => {
                 if self.selected_end < 1 {

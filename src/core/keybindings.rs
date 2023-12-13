@@ -6,7 +6,6 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 
-use super::event::EditCommand;
 use super::event::LineEditorEvent;
 
 /// Represent the key combination
@@ -133,7 +132,7 @@ impl Keybindings {
                 modifier: KeyModifiers::NONE,
                 key_code: KeyCode::Backspace,
             },
-            LineEditorEvent::Edit(vec![EditCommand::Backspace]),
+            LineEditorEvent::Backspace,
         );
 
         self.register_binding(
@@ -142,7 +141,7 @@ impl Keybindings {
                 modifier: KeyModifiers::NONE,
                 key_code: KeyCode::Delete,
             },
-            LineEditorEvent::Edit(vec![EditCommand::Delete]),
+            LineEditorEvent::Delete,
         );
     }
 
