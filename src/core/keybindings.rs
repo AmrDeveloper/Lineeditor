@@ -6,6 +6,8 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 
+use crate::event::EditCommand;
+
 use super::event::LineEditorEvent;
 
 /// Represent the key combination
@@ -84,6 +86,7 @@ impl Keybindings {
     /// Register basic functionality to Navigation
     ///
     /// `Up`, `Down`, `Right`, `Left` Arrow keys
+    /// `CTRL + Right`, `CTRL + Left`
     pub fn register_common_navigation_bindings(&mut self) {
         self.register_binding(
             KeyCombination {
@@ -119,6 +122,24 @@ impl Keybindings {
                 key_code: KeyCode::Right,
             },
             LineEditorEvent::Right,
+        );
+
+        self.register_binding(
+            KeyCombination {
+                key_kind: KeyEventKind::Press,
+                modifier: KeyModifiers::CONTROL,
+                key_code: KeyCode::Left,
+            },
+            LineEditorEvent::Edit(vec![EditCommand::MoveLeftWord]),
+        );
+
+        self.register_binding(
+            KeyCombination {
+                key_kind: KeyEventKind::Press,
+                modifier: KeyModifiers::CONTROL,
+                key_code: KeyCode::Right,
+            },
+            LineEditorEvent::Edit(vec![EditCommand::MoveRightWord]),
         );
     }
 

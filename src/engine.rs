@@ -13,6 +13,7 @@ use crate::event::LineEditorEvent;
 use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
+use crate::AutoPair;
 use crate::Painter;
 use crate::Prompt;
 
@@ -46,6 +47,8 @@ pub struct LineEditor {
     painter: Painter,
     keybindings: Keybindings,
 
+    autopair: Option<Box<dyn AutoPair>>,
+
     selection_style: Option<Style>,
     selected_start: u16,
     selected_end: u16,
@@ -61,6 +64,7 @@ impl LineEditor {
             painter: Painter::default(),
 
             keybindings: Keybindings::default(),
+            autopair: None,
 
             selection_style: None,
             selected_start: 0,
@@ -122,12 +126,23 @@ impl LineEditor {
                 }
             }
 
+            // Track the buffer size at the start
+            let buffer_len_bofore = self.editor.styled_buffer().len();
+
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
                 match self.handle_editor_event(&event)? {
                     EventStatus::Handled => {}
                     EventStatus::Inapplicable => {}
                     EventStatus::Exits(result) => return Ok(result),
+                }
+            }
+
+            // Run the auto pair complete if one char is inserted
+            if buffer_len_bofore < self.editor.styled_buffer().len() {
+                // Auto pair complete
+                if let Some(auto_pair) = &self.autopair {
+                    auto_pair.complete_pair(self.editor.styled_buffer());
                 }
             }
 
@@ -248,5 +263,10 @@ impl LineEditor {
     /// Get the current Keybindings
     pub fn keybinding(&mut self) -> &mut Keybindings {
         &mut self.keybindings
+    }
+
+    /// Add Auto pair, or clear it by passing None
+    pub fn set_autopair(&mut self, autopair: Option<Box<dyn AutoPair>>) {
+        self.autopair = autopair
     }
 }
