@@ -168,7 +168,7 @@ impl Keybindings {
 
     /// Register basic functionality to selection
     ///
-    /// Select right and left
+    /// Select right and left and select all
     pub fn register_common_selection_bindings(&mut self) {
         self.register_binding(
             KeyCombination {
@@ -186,6 +186,15 @@ impl Keybindings {
                 key_code: KeyCode::Right,
             },
             LineEditorEvent::SelectRight,
+        );
+
+        self.register_binding(
+            KeyCombination {
+                key_kind: KeyEventKind::Press,
+                modifier: KeyModifiers::CONTROL,
+                key_code: KeyCode::Char('a'),
+            },
+            LineEditorEvent::SelectAll,
         );
     }
 }

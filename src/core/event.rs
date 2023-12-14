@@ -79,6 +79,9 @@ pub enum LineEditorEvent {
     /// Select one character to the left
     SelectLeft,
 
+    /// Select all buffer
+    SelectAll,
+
     /// Delete char from the left or delete selected range
     Backspace,
 

@@ -223,6 +223,11 @@ impl LineEditor {
                     Ok(EventStatus::Handled)
                 }
             }
+            LineEditorEvent::SelectAll => {
+                self.selected_start = 0;
+                self.selected_end = self.editor.styled_buffer().len() as u16;
+                Ok(EventStatus::Handled)
+            }
             _ => Ok(EventStatus::Inapplicable),
         }
     }
