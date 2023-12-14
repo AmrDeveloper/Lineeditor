@@ -26,8 +26,10 @@ impl Editor {
         match command {
             EditCommand::MoveToStart => self.buffer.move_to_start(),
             EditCommand::MoveToEnd => self.buffer.move_to_end(),
-            EditCommand::MoveLeftChar => self.buffer.move_left_char(),
-            EditCommand::MoveRightChar => self.buffer.move_right_char(),
+            EditCommand::MoveLeftChar => self.buffer.move_char_left(),
+            EditCommand::MoveRightChar => self.buffer.move_char_right(),
+            EditCommand::MoveLeftWord => self.buffer.move_word_left(),
+            EditCommand::MoveRightWord => self.buffer.move_word_right(),
             EditCommand::MoveToPosition(position) => self.buffer.set_position(*position),
             EditCommand::InsertChar(c) => self.buffer.insert_char(*c),
             EditCommand::InsertString(s) => self.buffer.insert_string(s),

@@ -26,14 +26,14 @@ impl StyledBuffer {
     pub fn insert_char(&mut self, ch: char) {
         self.buffer.insert(self.cursor_position, ch);
         self.styles.insert(self.cursor_position, Style::default());
-        self.move_right_char();
+        self.move_char_right();
     }
 
     /// Insert character at the current position with style
     pub fn insert_styled_char(&mut self, ch: char, style: Style) {
         self.buffer.insert(self.cursor_position, ch);
         self.styles.insert(self.cursor_position, style);
-        self.move_right_char();
+        self.move_char_right();
     }
 
     /// Insert string at the current position with defualt style
@@ -51,15 +51,54 @@ impl StyledBuffer {
     }
 
     /// Safe Move the cursor position to the right
-    pub fn move_right_char(&mut self) {
+    pub fn move_char_right(&mut self) {
         if self.cursor_position < self.len() {
             self.cursor_position += 1;
         }
     }
 
     /// Safe Move the cursor position to the left
-    pub fn move_left_char(&mut self) {
+    pub fn move_char_left(&mut self) {
         if self.cursor_position > 0 {
+            self.cursor_position -= 1;
+        }
+    }
+
+    /// Move the cursor to the begine of the next right word
+    pub fn move_word_right(&mut self) {
+        while self.cursor_position < self.len() {
+            if self.buffer[self.cursor_position].is_whitespace() {
+                if self.cursor_position != self.len() {
+                    self.cursor_position += 1;
+                }
+                return;
+            }
+            self.cursor_position += 1;
+        }
+    }
+
+    /// Move the cursor to the begine of the next right word
+    pub fn move_word_left(&mut self) {
+        self.cursor_position = usize::min(self.cursor_position, self.len() - 1);
+        if self.cursor_position != 0 {
+            self.cursor_position -= 1;
+        }
+
+        while 0 != self.cursor_position {
+            if self.buffer[self.cursor_position].is_whitespace() {
+                self.cursor_position -= 1;
+                continue;
+            }
+            break;
+        }
+
+        while 0 != self.cursor_position {
+            if self.buffer[self.cursor_position].is_whitespace() {
+                if self.cursor_position + 1 < self.len() {
+                    self.cursor_position += 1;
+                }
+                return;
+            }
             self.cursor_position -= 1;
         }
     }

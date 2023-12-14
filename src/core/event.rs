@@ -15,6 +15,12 @@ pub enum EditCommand {
     /// Move one character to the right
     MoveRightChar,
 
+    /// Move one word to the left
+    MoveLeftWord,
+
+    /// Move one word to the right
+    MoveRightWord,
+
     /// Move to position
     MoveToPosition(usize),
 
@@ -72,6 +78,7 @@ pub enum LineEditorEvent {
 
     /// Select one character to the left
     SelectLeft,
+
     /// Delete char from the left or delete selected range
     Backspace,
 
