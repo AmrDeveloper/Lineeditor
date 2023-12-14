@@ -14,6 +14,7 @@ use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
 use crate::AutoPair;
+use crate::Hinter;
 use crate::Painter;
 use crate::Prompt;
 
@@ -46,8 +47,8 @@ pub struct LineEditor {
     editor: Editor,
     painter: Painter,
     keybindings: Keybindings,
-
     autopair: Option<Box<dyn AutoPair>>,
+    hinters: Vec<Box<dyn Hinter>>,
 
     selection_style: Option<Style>,
     selected_start: u16,
@@ -62,9 +63,9 @@ impl LineEditor {
             prompt,
             editor: Editor::default(),
             painter: Painter::default(),
-
             keybindings: Keybindings::default(),
             autopair: None,
+            hinters: vec![],
 
             selection_style: None,
             selected_start: 0,
@@ -155,6 +156,16 @@ impl LineEditor {
             // Render the current buffer with style
             self.painter
                 .render_line_buffer(self.editor.styled_buffer())?;
+
+            // If cursor is at the end of the buffer, check if hint is avaible
+            if self.editor.styled_buffer().position() == self.editor.styled_buffer().len() {
+                for hinter in &self.hinters {
+                    if let Some(hint) = hinter.hint(self.editor.styled_buffer()) {
+                        self.painter.render_hint(&hint)?;
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -273,5 +284,20 @@ impl LineEditor {
     /// Add Auto pair, or clear it by passing None
     pub fn set_autopair(&mut self, autopair: Option<Box<dyn AutoPair>>) {
         self.autopair = autopair
+    }
+
+    /// Get current hinters
+    pub fn hinters(&mut self) -> &mut Vec<Box<dyn Hinter>> {
+        &mut self.hinters
+    }
+
+    /// Add new Hinter
+    pub fn add_hinter(&mut self, hinter: Box<dyn Hinter>) {
+        self.hinters.push(hinter);
+    }
+
+    /// Clear current hinters
+    pub fn clear_hinters(&mut self) {
+        self.hinters.clear();
     }
 }

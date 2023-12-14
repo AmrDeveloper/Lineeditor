@@ -58,6 +58,20 @@ impl Painter {
         Ok(())
     }
 
+    /// Render hint at the end of buffer
+    pub fn render_hint(&mut self, hint: &StyledBuffer) -> Result<()> {
+        self.render_styled_buffer(hint)?;
+
+        // Move the cursor to the current insertion position
+        let (column, _) = cursor::position()?;
+        self.stdout.queue(cursor::MoveToColumn(column))?;
+
+        // Flush the output stream
+        self.stdout.flush()?;
+
+        Ok(())
+    }
+
     fn render_styled_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
         let styles = buffer.styles();
         let buffer_len = buffer.len();
