@@ -133,11 +133,6 @@ impl LineEditor {
             // Track the buffer size at the start
             let buffer_len_bofore = self.editor.styled_buffer().len();
 
-            // Apply all registerd syntax highlighter in insertion order
-            for highlighter in &self.highlighters {
-                highlighter.highlight(self.editor.styled_buffer());
-            }
-
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
                 match self.handle_editor_event(&event)? {
@@ -157,6 +152,11 @@ impl LineEditor {
 
             // Reset styled buffer styles
             self.editor.styled_buffer().reset_styles();
+
+            // Apply all registerd syntax highlighter in insertion order
+            for highlighter in &self.highlighters {
+                highlighter.highlight(self.editor.styled_buffer());
+            }
 
             // Apply visual selection
             self.apply_visual_selection();
@@ -209,6 +209,7 @@ impl LineEditor {
                     let delete_selection = EditCommand::DeleteSelected(from, to);
                     self.editor.run_edit_commands(&delete_selection);
                     self.editor.styled_buffer().set_position(from);
+                    self.reset_selection_range();
                 } else {
                     self.editor.run_edit_commands(&EditCommand::Delete)
                 }
@@ -221,6 +222,7 @@ impl LineEditor {
                     let delete_selection = EditCommand::DeleteSelected(from, to);
                     self.editor.run_edit_commands(&delete_selection);
                     self.editor.styled_buffer().set_position(from);
+                    self.reset_selection_range();
                 } else {
                     self.editor.run_edit_commands(&EditCommand::Backspace)
                 }
