@@ -14,6 +14,7 @@ use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
 use crate::AutoPair;
+use crate::Highlighter;
 use crate::Hinter;
 use crate::Painter;
 use crate::Prompt;
@@ -48,6 +49,7 @@ pub struct LineEditor {
     painter: Painter,
     keybindings: Keybindings,
     autopair: Option<Box<dyn AutoPair>>,
+    highlighters: Vec<Box<dyn Highlighter>>,
     hinters: Vec<Box<dyn Hinter>>,
 
     selection_style: Option<Style>,
@@ -65,6 +67,7 @@ impl LineEditor {
             painter: Painter::default(),
             keybindings: Keybindings::default(),
             autopair: None,
+            highlighters: vec![],
             hinters: vec![],
 
             selection_style: None,
@@ -129,6 +132,11 @@ impl LineEditor {
 
             // Track the buffer size at the start
             let buffer_len_bofore = self.editor.styled_buffer().len();
+
+            // Apply all registerd syntax highlighter in insertion order
+            for highlighter in &self.highlighters {
+                highlighter.highlight(self.editor.styled_buffer());
+            }
 
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
@@ -284,6 +292,21 @@ impl LineEditor {
     /// Add Auto pair, or clear it by passing None
     pub fn set_autopair(&mut self, autopair: Option<Box<dyn AutoPair>>) {
         self.autopair = autopair
+    }
+
+    /// Get the current list of highlighters
+    pub fn highlighters(&mut self) -> &mut Vec<Box<dyn Highlighter>> {
+        &mut self.highlighters
+    }
+
+    /// Add new Syntax highlighter
+    pub fn add_highlighter(&mut self, highlighter: Box<dyn Highlighter>) {
+        self.highlighters.push(highlighter);
+    }
+
+    /// Clear current syntax highlighter
+    pub fn clear_highlighters(&mut self) {
+        self.highlighters.clear();
     }
 
     /// Get current hinters
