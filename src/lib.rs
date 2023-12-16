@@ -7,13 +7,14 @@ pub use core::styled_buffer;
 
 mod engine;
 pub use engine::LineEditor;
+pub use engine::LineEditorResult;
 
 mod prompt;
 pub use prompt::Prompt;
 pub use prompt::StringPrompt;
 
-mod painter;
-pub use painter::Painter;
+mod render;
+pub use render::Painter;
 
 mod autopair;
 pub use autopair::AutoPair;

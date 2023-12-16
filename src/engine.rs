@@ -1,5 +1,6 @@
 use std::io::Result;
 
+use crossterm::cursor::position;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -95,8 +96,9 @@ impl LineEditor {
         let prompt_buffer = self.prompt.prompt();
         let promot_len = prompt_buffer.len() as u16;
 
-        self.painter.set_buffer_column_start(promot_len);
-        self.painter.render_promot_buffer(prompt_buffer)?;
+        self.painter
+            .set_start_position((promot_len, position().unwrap().1));
+        self.painter.render_promot_buffer(&prompt_buffer)?;
 
         loop {
             loop {

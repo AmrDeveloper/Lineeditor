@@ -14,7 +14,8 @@ use crate::core::styled_buffer::StyledBuffer;
 
 pub struct Painter {
     stdout: std::io::BufWriter<std::io::Stderr>,
-    buffer_column_start: u16,
+    start_position: (u16, u16),
+    terminal_size: (u16, u16),
 }
 
 /// Create default instance of Painter
@@ -22,7 +23,8 @@ impl Default for Painter {
     fn default() -> Self {
         Self {
             stdout: std::io::BufWriter::new(std::io::stderr()),
-            buffer_column_start: 0,
+            start_position: (0, 0),
+            terminal_size: terminal::size().unwrap_or((0, 0)),
         }
     }
 }
@@ -32,9 +34,11 @@ impl Painter {
     pub fn render_line_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
         let buffer_position = buffer.position() as u16;
 
-        // Reset cursor position
+        // Move to the start position, exacily after the promot
         self.stdout
-            .queue(cursor::MoveToColumn(self.buffer_column_start))?;
+            .queue(cursor::MoveToRow(self.start_position.1))?;
+        self.stdout
+            .queue(cursor::MoveToColumn(self.start_position.0))?;
 
         // Clear line
         self.stdout
@@ -43,10 +47,12 @@ impl Painter {
         self.render_styled_buffer(buffer)?;
 
         // Move the cursor to the current insertion position
-        let move_to_position = self.buffer_column_start + buffer_position;
-        self.stdout.queue(cursor::MoveToColumn(move_to_position))?;
+        let mut move_to_position = self.start_position.0 + buffer_position;
+        while self.terminal_size.0 > 0 && move_to_position > self.terminal_size.0 {
+            move_to_position -= self.terminal_size.0;
+        }
 
-        // Flush the output stream
+        self.stdout.queue(cursor::MoveToColumn(move_to_position))?;
         self.stdout.flush()?;
         Ok(())
     }
@@ -102,7 +108,7 @@ impl Painter {
     }
 
     /// Set the current line start position, after promot
-    pub fn set_buffer_column_start(&mut self, start: u16) {
-        self.buffer_column_start = start;
+    pub fn set_start_position(&mut self, position: (u16, u16)) {
+        self.start_position = position;
     }
 }

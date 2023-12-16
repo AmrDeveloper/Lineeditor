@@ -148,6 +148,26 @@ impl StyledBuffer {
         Some(self.buffer[position])
     }
 
+    /// Return the last keyword that contains alphabetic characters on the buffer or None
+    pub fn last_alphabetic_keyword(&mut self) -> Option<String> {
+        let mut keyword = String::new();
+
+        for c in self.buffer.iter().rev() {
+            if c.is_alphabetic() {
+                keyword.insert(0, *c);
+                continue;
+            }
+
+            break;
+        }
+
+        if keyword.is_empty() {
+            None
+        } else {
+            Some(keyword)
+        }
+    }
+
     /// Get current Styles
     pub fn styles(&self) -> &Vec<Style> {
         &self.styles
