@@ -3,6 +3,28 @@
 /// Executed by `Editor::run_edit_commands()`
 #[derive(Clone)]
 pub enum EditCommand {
+    /// Insert a character at the current insertion point
+    InsertChar(char),
+
+    /// Insert a string at the current insertion point
+    InsertString(String),
+
+    /// Backspace delete from the current insertion point
+    DeleteLeftChar,
+
+    /// Delete in-place from the current insertion point
+    DeleteRightChar,
+
+    /// Delete in-place the current selected range
+    DeleteSelected(usize, usize),
+
+    /// Clear the current buffer
+    Clear,
+}
+
+/// Movements actions which can be mapped to key bindings.
+#[derive(Clone)]
+pub enum MovementCommand {
     /// Move to the start of the buffer
     MoveToStart,
 
@@ -23,24 +45,6 @@ pub enum EditCommand {
 
     /// Move to position
     MoveToPosition(usize),
-
-    /// Insert a character at the current insertion point
-    InsertChar(char),
-
-    /// Insert a string at the current insertion point
-    InsertString(String),
-
-    /// Backspace delete from the current insertion point
-    Backspace,
-
-    /// Delete in-place from the current insertion point
-    Delete,
-
-    /// Delete in-place the current selected range
-    DeleteSelected(usize, usize),
-
-    /// Clear the current buffer
-    Clear,
 }
 
 /// LineEditor supported actions.
@@ -60,6 +64,9 @@ pub enum LineEditorEvent {
 
     /// Run these commands in the editor
     Edit(Vec<EditCommand>),
+
+    /// Run movements commands in the editor
+    Movement(Vec<MovementCommand>),
 
     /// Move up to the previous line, if multiline, or up into the historic buffers
     Up,

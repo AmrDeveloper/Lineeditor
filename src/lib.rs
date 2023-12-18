@@ -14,7 +14,7 @@ pub use prompt::Prompt;
 pub use prompt::StringPrompt;
 
 mod render;
-pub use render::Painter;
+pub use render::Render;
 
 mod autopair;
 pub use autopair::AutoPair;
@@ -28,6 +28,7 @@ mod highlighter;
 pub use highlighter::Highlighter;
 
 // Reexport the key types to be independent from an explicit crossterm dependency.
+pub use crossterm::cursor::SetCursorStyle;
 pub use crossterm::event::KeyCode;
 pub use crossterm::event::KeyEventKind;
 pub use crossterm::event::KeyModifiers;

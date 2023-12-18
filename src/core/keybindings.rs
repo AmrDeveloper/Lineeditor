@@ -6,7 +6,7 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 
-use crate::event::EditCommand;
+use crate::event::MovementCommand;
 
 use super::event::LineEditorEvent;
 
@@ -87,6 +87,7 @@ impl Keybindings {
     ///
     /// `Up`, `Down`, `Right`, `Left` Arrow keys
     /// `CTRL + Right`, `CTRL + Left`
+    /// `Home`, `End`
     pub fn register_common_navigation_bindings(&mut self) {
         self.register_binding(
             KeyCombination {
@@ -127,10 +128,28 @@ impl Keybindings {
         self.register_binding(
             KeyCombination {
                 key_kind: KeyEventKind::Press,
+                modifier: KeyModifiers::NONE,
+                key_code: KeyCode::Home,
+            },
+            LineEditorEvent::Movement(vec![MovementCommand::MoveToStart]),
+        );
+
+        self.register_binding(
+            KeyCombination {
+                key_kind: KeyEventKind::Press,
+                modifier: KeyModifiers::NONE,
+                key_code: KeyCode::End,
+            },
+            LineEditorEvent::Movement(vec![MovementCommand::MoveToEnd]),
+        );
+
+        self.register_binding(
+            KeyCombination {
+                key_kind: KeyEventKind::Press,
                 modifier: KeyModifiers::CONTROL,
                 key_code: KeyCode::Left,
             },
-            LineEditorEvent::Edit(vec![EditCommand::MoveLeftWord]),
+            LineEditorEvent::Movement(vec![MovementCommand::MoveLeftWord]),
         );
 
         self.register_binding(
@@ -139,7 +158,7 @@ impl Keybindings {
                 modifier: KeyModifiers::CONTROL,
                 key_code: KeyCode::Right,
             },
-            LineEditorEvent::Edit(vec![EditCommand::MoveRightWord]),
+            LineEditorEvent::Movement(vec![MovementCommand::MoveRightWord]),
         );
     }
 

@@ -1,3 +1,5 @@
+use crate::event::MovementCommand;
+
 use super::event::EditCommand;
 use super::styled_buffer::StyledBuffer;
 
@@ -24,19 +26,25 @@ impl Editor {
     /// Apply [`EditCommand`] to the current buffer
     pub fn run_edit_commands(&mut self, command: &EditCommand) {
         match command {
-            EditCommand::MoveToStart => self.buffer.move_to_start(),
-            EditCommand::MoveToEnd => self.buffer.move_to_end(),
-            EditCommand::MoveLeftChar => self.buffer.move_char_left(),
-            EditCommand::MoveRightChar => self.buffer.move_char_right(),
-            EditCommand::MoveLeftWord => self.buffer.move_word_left(),
-            EditCommand::MoveRightWord => self.buffer.move_word_right(),
-            EditCommand::MoveToPosition(position) => self.buffer.set_position(*position),
             EditCommand::InsertChar(c) => self.buffer.insert_char(*c),
             EditCommand::InsertString(s) => self.buffer.insert_string(s),
-            EditCommand::Backspace => self.buffer.delete_left_char(),
-            EditCommand::Delete => self.buffer.delete_right_char(),
+            EditCommand::DeleteLeftChar => self.buffer.delete_left_char(),
+            EditCommand::DeleteRightChar => self.buffer.delete_right_char(),
             EditCommand::DeleteSelected(from, to) => self.buffer.delete_range(*from, *to),
             EditCommand::Clear => self.buffer.clear(),
+        }
+    }
+
+    /// Apply [`MovementCommand`] to the current buffer
+    pub fn run_movement_commands(&mut self, command: &MovementCommand) {
+        match command {
+            MovementCommand::MoveToStart => self.buffer.move_to_start(),
+            MovementCommand::MoveToEnd => self.buffer.move_to_end(),
+            MovementCommand::MoveLeftChar => self.buffer.move_char_left(),
+            MovementCommand::MoveRightChar => self.buffer.move_char_right(),
+            MovementCommand::MoveLeftWord => self.buffer.move_word_left(),
+            MovementCommand::MoveRightWord => self.buffer.move_word_right(),
+            MovementCommand::MoveToPosition(position) => self.buffer.set_position(*position),
         }
     }
 }

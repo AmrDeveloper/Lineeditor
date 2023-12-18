@@ -2,6 +2,7 @@ use std::io::Result;
 use std::io::Write;
 
 use crossterm::cursor;
+use crossterm::cursor::SetCursorStyle;
 use crossterm::style::Color;
 use crossterm::style::Print;
 use crossterm::style::SetAttribute;
@@ -12,14 +13,14 @@ use crossterm::QueueableCommand;
 
 use crate::core::styled_buffer::StyledBuffer;
 
-pub struct Painter {
+pub struct Render {
     stdout: std::io::BufWriter<std::io::Stderr>,
     start_position: (u16, u16),
     terminal_size: (u16, u16),
 }
 
 /// Create default instance of Painter
-impl Default for Painter {
+impl Default for Render {
     fn default() -> Self {
         Self {
             stdout: std::io::BufWriter::new(std::io::stderr()),
@@ -29,7 +30,7 @@ impl Default for Painter {
     }
 }
 
-impl Painter {
+impl Render {
     /// Render the current line styled buffer
     pub fn render_line_buffer(&mut self, buffer: &StyledBuffer) -> Result<()> {
         let buffer_position = buffer.position() as u16;
@@ -47,20 +48,26 @@ impl Painter {
         self.render_styled_buffer(buffer)?;
 
         // Move the cursor to the current insertion position
-        let mut move_to_position = self.start_position.0 + buffer_position;
+        self.update_cursor_position(buffer_position)?;
+        self.flush()?;
+        Ok(())
+    }
+
+    /// Receving the insertion position on buffer and update the position on ui
+    /// by calculating the right position using the promot length
+    pub fn update_cursor_position(&mut self, position: u16) -> Result<()> {
+        let mut move_to_position = self.start_position.0 + position;
         while self.terminal_size.0 > 0 && move_to_position > self.terminal_size.0 {
             move_to_position -= self.terminal_size.0;
         }
-
         self.stdout.queue(cursor::MoveToColumn(move_to_position))?;
-        self.stdout.flush()?;
         Ok(())
     }
 
     /// Render the prompt styled buffer
     pub fn render_promot_buffer(&mut self, prompt: &StyledBuffer) -> Result<()> {
         self.render_styled_buffer(prompt)?;
-        self.stdout.flush()?;
+        self.flush()?;
         Ok(())
     }
 
@@ -107,8 +114,20 @@ impl Painter {
         Ok(())
     }
 
+    /// Update the stdout cursor style
+    pub fn set_cursor_style(&mut self, style: SetCursorStyle) -> Result<()> {
+        self.stdout.queue(style)?;
+        Ok(())
+    }
+
     /// Set the current line start position, after promot
     pub fn set_start_position(&mut self, position: (u16, u16)) {
         self.start_position = position;
+    }
+
+    /// Flush the current output stream,
+    pub fn flush(&mut self) -> Result<()> {
+        self.stdout.flush()?;
+        Ok(())
     }
 }

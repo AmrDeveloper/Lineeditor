@@ -1,6 +1,7 @@
 use std::io::Result;
 
 use crossterm::cursor::position;
+use crossterm::cursor::SetCursorStyle;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -11,14 +12,15 @@ use crossterm::terminal;
 use crate::editor::Editor;
 use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
+use crate::event::MovementCommand;
 use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
 use crate::AutoPair;
 use crate::Highlighter;
 use crate::Hinter;
-use crate::Painter;
 use crate::Prompt;
+use crate::Render;
 
 /// A Result can return from`LineEditor::read_line()`
 #[derive(Debug)]
@@ -35,8 +37,12 @@ pub enum LineEditorResult {
 
 /// An internal Status returnd after applying event
 enum EventStatus {
-    /// Event is handled
-    Handled,
+    /// Edit Event is handled
+    EditHandled,
+    /// Movement Event is handled
+    MovementHandled,
+    /// Selection Event is handled
+    SelectionHandled,
     /// Event is in applicable to handle
     Inapplicable,
     /// Exit with Result or Error
@@ -47,12 +53,12 @@ enum EventStatus {
 pub struct LineEditor {
     prompt: Box<dyn Prompt>,
     editor: Editor,
-    painter: Painter,
+    render: Render,
     keybindings: Keybindings,
     autopair: Option<Box<dyn AutoPair>>,
     highlighters: Vec<Box<dyn Highlighter>>,
     hinters: Vec<Box<dyn Hinter>>,
-
+    cursor_style: Option<SetCursorStyle>,
     selection_style: Option<Style>,
     selected_start: u16,
     selected_end: u16,
@@ -65,12 +71,12 @@ impl LineEditor {
         LineEditor {
             prompt,
             editor: Editor::default(),
-            painter: Painter::default(),
+            render: Render::default(),
             keybindings: Keybindings::default(),
             autopair: None,
             highlighters: vec![],
             hinters: vec![],
-
+            cursor_style: None,
             selection_style: None,
             selected_start: 0,
             selected_end: 0,
@@ -82,9 +88,16 @@ impl LineEditor {
     /// Returns a [`std::io::Result`] in which the `Err` type is [`std::io::Result`]
     /// and the `Ok` variant wraps a [`LineEditorResult`] which handles user inputs.
     pub fn read_line(&mut self) -> Result<LineEditorResult> {
+        if let Some(cursor_style) = self.cursor_style {
+            self.render.set_cursor_style(cursor_style)?;
+        }
+
         terminal::enable_raw_mode()?;
         let result = self.read_line_helper();
         terminal::disable_raw_mode()?;
+
+        let default_cursor_style = SetCursorStyle::DefaultUserShape;
+        self.render.set_cursor_style(default_cursor_style)?;
         result
     }
 
@@ -96,9 +109,9 @@ impl LineEditor {
         let prompt_buffer = self.prompt.prompt();
         let promot_len = prompt_buffer.len() as u16;
 
-        self.painter
-            .set_start_position((promot_len, position().unwrap().1));
-        self.painter.render_promot_buffer(&prompt_buffer)?;
+        let row_start = position().unwrap().1;
+        self.render.set_start_position((promot_len, row_start));
+        self.render.render_promot_buffer(&prompt_buffer)?;
 
         loop {
             loop {
@@ -138,9 +151,11 @@ impl LineEditor {
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
                 match self.handle_editor_event(&event)? {
-                    EventStatus::Handled => {}
-                    EventStatus::Inapplicable => {}
+                    EventStatus::Inapplicable => {
+                        continue;
+                    }
                     EventStatus::Exits(result) => return Ok(result),
+                    _ => {}
                 }
             }
 
@@ -164,14 +179,14 @@ impl LineEditor {
             self.apply_visual_selection();
 
             // Render the current buffer with style
-            self.painter
+            self.render
                 .render_line_buffer(self.editor.styled_buffer())?;
 
             // If cursor is at the end of the buffer, check if hint is avaible
             if self.editor.styled_buffer().position() == self.editor.styled_buffer().len() {
                 for hinter in &self.hinters {
                     if let Some(hint) = hinter.hint(self.editor.styled_buffer()) {
-                        self.painter.render_hint(&hint)?;
+                        self.render.render_hint(&hint)?;
                         break;
                     }
                 }
@@ -187,7 +202,14 @@ impl LineEditor {
                     self.editor.run_edit_commands(command);
                 }
                 self.reset_selection_range();
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::EditHandled)
+            }
+            LineEditorEvent::Movement(commands) => {
+                for command in commands {
+                    self.editor.run_movement_commands(command);
+                }
+                self.reset_selection_range();
+                Ok(EventStatus::MovementHandled)
             }
             LineEditorEvent::Enter => {
                 let buffer = self.editor.styled_buffer().buffer().iter().collect();
@@ -195,14 +217,16 @@ impl LineEditor {
                 Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
             }
             LineEditorEvent::Left => {
-                self.editor.run_edit_commands(&EditCommand::MoveLeftChar);
+                self.editor
+                    .run_movement_commands(&MovementCommand::MoveLeftChar);
                 self.reset_selection_range();
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::MovementHandled)
             }
             LineEditorEvent::Right => {
-                self.editor.run_edit_commands(&EditCommand::MoveRightChar);
+                self.editor
+                    .run_movement_commands(&MovementCommand::MoveRightChar);
                 self.reset_selection_range();
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::MovementHandled)
             }
             LineEditorEvent::Delete => {
                 if self.selected_start != self.selected_end {
@@ -213,9 +237,9 @@ impl LineEditor {
                     self.editor.styled_buffer().set_position(from);
                     self.reset_selection_range();
                 } else {
-                    self.editor.run_edit_commands(&EditCommand::Delete)
+                    self.editor.run_edit_commands(&EditCommand::DeleteRightChar)
                 }
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::EditHandled)
             }
             LineEditorEvent::Backspace => {
                 if self.selected_start != self.selected_end {
@@ -226,16 +250,16 @@ impl LineEditor {
                     self.editor.styled_buffer().set_position(from);
                     self.reset_selection_range();
                 } else {
-                    self.editor.run_edit_commands(&EditCommand::Backspace)
+                    self.editor.run_edit_commands(&EditCommand::DeleteLeftChar)
                 }
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::EditHandled)
             }
             LineEditorEvent::SelectLeft => {
                 if self.selected_end < 1 {
                     Ok(EventStatus::Inapplicable)
                 } else {
                     self.selected_end -= 1;
-                    Ok(EventStatus::Handled)
+                    Ok(EventStatus::SelectionHandled)
                 }
             }
             LineEditorEvent::SelectRight => {
@@ -243,13 +267,13 @@ impl LineEditor {
                     Ok(EventStatus::Inapplicable)
                 } else {
                     self.selected_end += 1;
-                    Ok(EventStatus::Handled)
+                    Ok(EventStatus::SelectionHandled)
                 }
             }
             LineEditorEvent::SelectAll => {
                 self.selected_start = 0;
                 self.selected_end = self.editor.styled_buffer().len() as u16;
-                Ok(EventStatus::Handled)
+                Ok(EventStatus::SelectionHandled)
             }
             _ => Ok(EventStatus::Inapplicable),
         }
@@ -296,6 +320,12 @@ impl LineEditor {
     /// Add Auto pair, or clear it by passing None
     pub fn set_autopair(&mut self, autopair: Option<Box<dyn AutoPair>>) {
         self.autopair = autopair
+    }
+
+    /// Set the current cursor style
+    /// Or `None` to reset
+    pub fn set_cursor_style(&mut self, style: Option<SetCursorStyle>) {
+        self.cursor_style = style;
     }
 
     /// Get the current list of highlighters
