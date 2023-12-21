@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/amrdeveloper/lineeditor"
 license = "MIT"
+authors = ["AmrDeveloper"]
+description = "A cross platform line editor"
+readme = "README.md"
+keywords = ["line-editor", "gitql"]
+categories = ["command-line-utilities"]
 
 [lib]
 doctest = true
