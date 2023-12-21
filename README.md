@@ -3,10 +3,10 @@
 <p align="center">
   <img alt="Crates.io" src="https://img.shields.io/crates/v/lineeditor?style=flat-square">
   <img alt="Deps" src="https://deps.rs/repo/github/amrdeveloper/lineeditor/status.svg">
-  <img alt="GitHub release" src="https://img.shields.io/github/v/release/amrdeveloper/lineeditor">
-  <img alt="GitHub issues" src="https://img.shields.io/github/issues/amrdeveloper/lineeditor">
+  <img alt="GitHub release" src="https://img.shields.io/github/v/release/amrdeveloper/Lineeditor">
+  <img alt="GitHub issues" src="https://img.shields.io/github/issues/amrdeveloper/Lineeditor">
   <img alt="GitHub" src="https://img.shields.io/github/license/amrdeveloper/lineeditor">
-  <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/amrdeveloper/lineeditor/total">
+  <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/amrdeveloper/Lineeditor/total">
 </p>
 
 <p align="center">
