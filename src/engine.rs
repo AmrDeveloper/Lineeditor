@@ -1,5 +1,7 @@
 use std::io::Result;
 
+use clipboard::ClipboardContext;
+use clipboard::ClipboardProvider;
 use crossterm::cursor::position;
 use crossterm::cursor::SetCursorStyle;
 use crossterm::event;
@@ -35,8 +37,10 @@ pub enum LineEditorResult {
     EndTerminalSession,
 }
 
-/// An internal Status returnd after applying event
+/// An internal Status returned after applying event
 enum EventStatus {
+    /// General Event Handled
+    GeneralHandled,
     /// Edit Event is handled
     EditHandled,
     /// Movement Event is handled
@@ -55,7 +59,7 @@ pub struct LineEditor {
     editor: Editor,
     render: Render,
     keybindings: Keybindings,
-    autopair: Option<Box<dyn AutoPair>>,
+    auto_pair: Option<Box<dyn AutoPair>>,
     highlighters: Vec<Box<dyn Highlighter>>,
     hinters: Vec<Box<dyn Hinter>>,
     cursor_style: Option<SetCursorStyle>,
@@ -73,7 +77,7 @@ impl LineEditor {
             editor: Editor::default(),
             render: Render::default(),
             keybindings: Keybindings::default(),
-            autopair: None,
+            auto_pair: None,
             highlighters: vec![],
             hinters: vec![],
             cursor_style: None,
@@ -111,7 +115,7 @@ impl LineEditor {
 
         let row_start = position().unwrap().1;
         self.render.set_start_position((promot_len, row_start));
-        self.render.render_promot_buffer(&prompt_buffer)?;
+        self.render.render_prompt_buffer(&prompt_buffer)?;
 
         loop {
             loop {
@@ -146,7 +150,7 @@ impl LineEditor {
             }
 
             // Track the buffer size at the start
-            let buffer_len_bofore = self.editor.styled_buffer().len();
+            let buffer_len_before = self.editor.styled_buffer().len();
 
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
@@ -160,9 +164,9 @@ impl LineEditor {
             }
 
             // Run the auto pair complete if one char is inserted
-            if buffer_len_bofore < self.editor.styled_buffer().len() {
+            if buffer_len_before < self.editor.styled_buffer().len() {
                 // Auto pair complete
-                if let Some(auto_pair) = &self.autopair {
+                if let Some(auto_pair) = &self.auto_pair {
                     auto_pair.complete_pair(self.editor.styled_buffer());
                 }
             }
@@ -170,7 +174,7 @@ impl LineEditor {
             // Reset styled buffer styles
             self.editor.styled_buffer().reset_styles();
 
-            // Apply all registerd syntax highlighter in insertion order
+            // Apply all registered syntax highlighter in insertion order
             for highlighter in &self.highlighters {
                 highlighter.highlight(self.editor.styled_buffer());
             }
@@ -182,7 +186,7 @@ impl LineEditor {
             self.render
                 .render_line_buffer(self.editor.styled_buffer())?;
 
-            // If cursor is at the end of the buffer, check if hint is avaible
+            // If cursor is at the end of the buffer, check if hint is available
             if self.editor.styled_buffer().position() == self.editor.styled_buffer().len() {
                 for hinter in &self.hinters {
                     if let Some(hint) = hinter.hint(self.editor.styled_buffer()) {
@@ -230,12 +234,7 @@ impl LineEditor {
             }
             LineEditorEvent::Delete => {
                 if self.selected_start != self.selected_end {
-                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
-                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
-                    let delete_selection = EditCommand::DeleteSelected(from, to);
-                    self.editor.run_edit_commands(&delete_selection);
-                    self.editor.styled_buffer().set_position(from);
-                    self.reset_selection_range();
+                    self.delete_selected_text();
                 } else {
                     self.editor.run_edit_commands(&EditCommand::DeleteRightChar)
                 }
@@ -243,12 +242,7 @@ impl LineEditor {
             }
             LineEditorEvent::Backspace => {
                 if self.selected_start != self.selected_end {
-                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
-                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
-                    let delete_selection = EditCommand::DeleteSelected(from, to);
-                    self.editor.run_edit_commands(&delete_selection);
-                    self.editor.styled_buffer().set_position(from);
-                    self.reset_selection_range();
+                    self.delete_selected_text();
                 } else {
                     self.editor.run_edit_commands(&EditCommand::DeleteLeftChar)
                 }
@@ -275,6 +269,51 @@ impl LineEditor {
                 self.selected_end = self.editor.styled_buffer().len() as u16;
                 Ok(EventStatus::SelectionHandled)
             }
+            LineEditorEvent::CutSelected => {
+                if self.selected_start != self.selected_end {
+                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
+                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
+                    let styled_buffer = self.editor.styled_buffer();
+                    if let Some(selected_text) = styled_buffer.sub_string(from.into(), to.into()) {
+                        let mut clipboard_context: ClipboardContext =
+                            ClipboardProvider::new().unwrap();
+                        let _ = clipboard_context.set_contents(selected_text);
+
+                        styled_buffer.delete_range(from, to);
+                        self.reset_selection_range();
+                        return Ok(EventStatus::GeneralHandled);
+                    }
+                }
+                Ok(EventStatus::Inapplicable)
+            }
+            LineEditorEvent::CopySelected => {
+                if self.selected_start != self.selected_end {
+                    let from = usize::min(self.selected_start.into(), self.selected_end.into());
+                    let to = usize::max(self.selected_start.into(), self.selected_end.into());
+                    let styled_buffer = self.editor.styled_buffer();
+                    if let Some(selected_text) = styled_buffer.sub_string(from.into(), to.into()) {
+                        let mut clipboard_context: ClipboardContext =
+                            ClipboardProvider::new().unwrap();
+                        let _ = clipboard_context.set_contents(selected_text);
+                        return Ok(EventStatus::GeneralHandled);
+                    }
+                }
+                Ok(EventStatus::Inapplicable)
+            }
+            LineEditorEvent::Paste => {
+                let mut clipboard_context: ClipboardContext = ClipboardProvider::new().unwrap();
+                let clipboard_contents = clipboard_context.get_contents();
+                if clipboard_contents.is_ok() {
+                    if self.selected_start != self.selected_end {
+                        self.delete_selected_text();
+                    }
+                    let content = clipboard_contents.unwrap();
+                    self.editor
+                        .run_edit_commands(&EditCommand::InsertString(content));
+                    return Ok(EventStatus::GeneralHandled);
+                }
+                Ok(EventStatus::Inapplicable)
+            }
             _ => Ok(EventStatus::Inapplicable),
         }
     }
@@ -293,6 +332,20 @@ impl LineEditor {
             let to = usize::max(self.selected_start.into(), self.selected_end.into());
             styled_buffer.style_range(from, to, style.clone());
         }
+    }
+
+    /// Delete the current selected text
+    fn delete_selected_text(&mut self) {
+        if self.selected_start == self.selected_end {
+            return;
+        }
+
+        let from = usize::min(self.selected_start.into(), self.selected_end.into());
+        let to = usize::max(self.selected_start.into(), self.selected_end.into());
+        let delete_selection = EditCommand::DeleteSelected(from, to);
+        self.editor.run_edit_commands(&delete_selection);
+        self.editor.styled_buffer().set_position(from);
+        self.reset_selection_range();
     }
 
     /// Reset selection start and end to be the current cursor position
@@ -318,8 +371,8 @@ impl LineEditor {
     }
 
     /// Add Auto pair, or clear it by passing None
-    pub fn set_autopair(&mut self, autopair: Option<Box<dyn AutoPair>>) {
-        self.autopair = autopair
+    pub fn set_auto_pair(&mut self, auto_pair: Option<Box<dyn AutoPair>>) {
+        self.auto_pair = auto_pair
     }
 
     /// Set the current cursor style

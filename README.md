@@ -6,7 +6,6 @@
   <img alt="GitHub release" src="https://img.shields.io/github/v/release/amrdeveloper/Lineeditor">
   <img alt="GitHub issues" src="https://img.shields.io/github/issues/amrdeveloper/Lineeditor">
   <img alt="GitHub" src="https://img.shields.io/github/license/amrdeveloper/lineeditor">
-  <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/amrdeveloper/Lineeditor/total">
 </p>
 
 <p align="center">

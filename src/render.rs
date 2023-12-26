@@ -65,7 +65,7 @@ impl Render {
     }
 
     /// Render the prompt styled buffer
-    pub fn render_promot_buffer(&mut self, prompt: &StyledBuffer) -> Result<()> {
+    pub fn render_prompt_buffer(&mut self, prompt: &StyledBuffer) -> Result<()> {
         self.render_styled_buffer(prompt)?;
         self.flush()?;
         Ok(())

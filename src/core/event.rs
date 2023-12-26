@@ -89,6 +89,15 @@ pub enum LineEditorEvent {
     /// Select all buffer
     SelectAll,
 
+    /// Cut the selected text into clipboard
+    CutSelected,
+
+    /// Copy the selected text into clipboard
+    CopySelected,
+
+    /// Paste text from clipboard into selection or at insertion point
+    Paste,
+
     /// Delete char from the left or delete selected range
     Backspace,
 

@@ -36,7 +36,7 @@ impl StyledBuffer {
         self.move_char_right();
     }
 
-    /// Insert string at the current position with defualt style
+    /// Insert string at the current position with default style
     pub fn insert_string(&mut self, str: &str) {
         for ch in str.chars() {
             self.insert_char(ch);
@@ -64,7 +64,7 @@ impl StyledBuffer {
         }
     }
 
-    /// Move the cursor to the begine of the next right word
+    /// Move the cursor to the begin of the next right word
     pub fn move_word_right(&mut self) {
         while self.cursor_position < self.len() {
             if self.buffer[self.cursor_position].is_whitespace() {
@@ -77,7 +77,7 @@ impl StyledBuffer {
         }
     }
 
-    /// Move the cursor to the begine of the next right word
+    /// Move the cursor to the begin of the next right word
     pub fn move_word_left(&mut self) {
         self.cursor_position = usize::min(self.cursor_position, self.len() - 1);
         if self.cursor_position != 0 {
@@ -146,6 +146,15 @@ impl StyledBuffer {
     /// Get char at position
     pub fn char_at(&self, position: usize) -> Option<char> {
         Some(self.buffer[position])
+    }
+
+    /// Get the sub string from the provided range, or None if range is invalid
+    pub fn sub_string(&self, start: usize, end: usize) -> Option<String> {
+        if start < end && end <= self.len() {
+            let slice: String = self.buffer[start..end].iter().clone().collect();
+            return Some(slice);
+        }
+        None
     }
 
     /// Return the last keyword that contains alphabetic characters on the buffer or None
