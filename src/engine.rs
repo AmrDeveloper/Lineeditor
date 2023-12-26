@@ -274,7 +274,7 @@ impl LineEditor {
                     let from = usize::min(self.selected_start.into(), self.selected_end.into());
                     let to = usize::max(self.selected_start.into(), self.selected_end.into());
                     let styled_buffer = self.editor.styled_buffer();
-                    if let Some(selected_text) = styled_buffer.sub_string(from.into(), to.into()) {
+                    if let Some(selected_text) = styled_buffer.sub_string(from, to) {
                         let mut clipboard_context: ClipboardContext =
                             ClipboardProvider::new().unwrap();
                         let _ = clipboard_context.set_contents(selected_text);
@@ -291,7 +291,7 @@ impl LineEditor {
                     let from = usize::min(self.selected_start.into(), self.selected_end.into());
                     let to = usize::max(self.selected_start.into(), self.selected_end.into());
                     let styled_buffer = self.editor.styled_buffer();
-                    if let Some(selected_text) = styled_buffer.sub_string(from.into(), to.into()) {
+                    if let Some(selected_text) = styled_buffer.sub_string(from, to) {
                         let mut clipboard_context: ClipboardContext =
                             ClipboardProvider::new().unwrap();
                         let _ = clipboard_context.set_contents(selected_text);
@@ -307,10 +307,12 @@ impl LineEditor {
                     if self.selected_start != self.selected_end {
                         self.delete_selected_text();
                     }
-                    let content = clipboard_contents.unwrap();
-                    self.editor
-                        .run_edit_commands(&EditCommand::InsertString(content));
-                    return Ok(EventStatus::GeneralHandled);
+
+                    if let Ok(content) = clipboard_contents {
+                        self.editor
+                            .run_edit_commands(&EditCommand::InsertString(content));
+                        return Ok(EventStatus::GeneralHandled);
+                    }
                 }
                 Ok(EventStatus::Inapplicable)
             }
