@@ -21,10 +21,10 @@ impl Highlighter for GitQLHighlighter {
         let mut i: usize = 0;
 
         let mut keyword_style = Style::default();
-        keyword_style.set_forground_color(Color::Magenta);
+        keyword_style.set_foreground_color(Color::Magenta);
 
         let mut string_style = Style::default();
-        string_style.set_forground_color(Color::Yellow);
+        string_style.set_foreground_color(Color::Yellow);
 
         loop {
             if i >= lines.len() {
@@ -71,7 +71,7 @@ impl Highlighter for GitQLHighlighter {
 }
 
 fn main() {
-    let prompt = StringPrompt::new("gql> ".to_string());
+    let prompt = StringPrompt::new("prompt> ".to_string());
     let mut line_editor = LineEditor::new(Box::new(prompt));
 
     line_editor.add_highlighter(Box::<GitQLHighlighter>::default());

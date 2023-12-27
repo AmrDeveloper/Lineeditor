@@ -1,11 +1,11 @@
 use crossterm::style::Attribute;
 use crossterm::style::Color;
 
-/// Represent the forground, background colors and attributes
+/// Represent the foreground, background colors and attributes
 #[derive(Clone)]
 pub struct Style {
-    /// Optional forground color
-    forground: Option<Color>,
+    /// Optional foreground color
+    foreground: Option<Color>,
     /// Optional background color
     background: Option<Color>,
     /// Set of attributes like Bold, Italic, Undercurled...etc.
@@ -16,7 +16,7 @@ pub struct Style {
 impl Default for Style {
     fn default() -> Self {
         Style {
-            forground: None,
+            foreground: None,
             background: None,
             attributes: vec![],
         }
@@ -24,14 +24,14 @@ impl Default for Style {
 }
 
 impl Style {
-    /// Get the style forground color
-    pub fn set_forground_color(&mut self, color: Color) {
-        self.forground = Some(color);
+    /// Get the style foreground color
+    pub fn set_foreground_color(&mut self, color: Color) {
+        self.foreground = Some(color);
     }
 
-    /// Get the style forground color
-    pub fn forground_color(&self) -> &Option<Color> {
-        &self.forground
+    /// Get the style foreground color
+    pub fn foreground_color(&self) -> &Option<Color> {
+        &self.foreground
     }
 
     /// Get the style background color

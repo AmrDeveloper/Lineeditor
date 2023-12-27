@@ -9,17 +9,20 @@
 </p>
 
 <p align="center">
-A new cross platform Line editor implementation inspired by reedline and rustyline primarily developed as the interactive editor for the GitQL project.
+A new cross platform Line editor implementation inspired by reedline, rustyline and other cool line editors, designed with the goal to provides the core components that allows you to build your custom line editor with as mush as customization options.
 </p>
 
 <p align="center">
   <img src="media/line_editor_demo.gif" alt="animated" width="100%"/>
 </p>
 
+> [!IMPORTANT]
+> LineEditor API is still experimental and may be changed from version to version until finishing the design and implementations of the basics features
+
 ### Basic example
 
 ```rs
-let prompt = StringPrompt::new("gql> ".to_string());
+let prompt = StringPrompt::new("prompt> ".to_string());
 let line_editor = LineEditor::new(Box::new(prompt));
 match line_editor.read_line() {
     Ok(LineEditorResult::Success(buffer)) => {
@@ -29,10 +32,11 @@ match line_editor.read_line() {
 }
 ```
 
-### Customization
+### Customization examples
 - [Text Prompt](/examples/text_prompt.rs)
 - [Custom Prompt](/examples/custom_prompt.rs)
 - [Cursor style](/examples/cursor_style.rs)
+- [Input Filter](/examples/input_filter.rs)
 - [Key bindings](/examples/key_bindings.rs)
 - [Keywords Highlighter](/examples/keyword_highlighter.rs)
 - [Matching Brackets Highlighter](/examples/matching_brackets_highlighter.rs)

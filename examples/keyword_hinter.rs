@@ -24,7 +24,7 @@ impl Hinter for GitQLHinter {
                     let hint = &word[keyword.len()..];
                     let mut styled_buffer = StyledBuffer::default();
                     let mut style = Style::default();
-                    style.set_forground_color(Color::DarkGrey);
+                    style.set_foreground_color(Color::DarkGrey);
                     styled_buffer.insert_styled_string(hint, style);
                     return Some(styled_buffer);
                 }
@@ -35,7 +35,7 @@ impl Hinter for GitQLHinter {
 }
 
 fn main() {
-    let prompt = StringPrompt::new("gql> ".to_string());
+    let prompt = StringPrompt::new("prompt> ".to_string());
     let mut line_editor = LineEditor::new(Box::new(prompt));
     line_editor.add_hinter(Box::<GitQLHinter>::default());
 

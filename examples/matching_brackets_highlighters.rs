@@ -45,7 +45,7 @@ impl Highlighter for MatchingBracketsHighlighter {
                 brackets_stack.push(color);
 
                 let mut style = Style::default();
-                style.set_forground_color(color);
+                style.set_foreground_color(color);
                 buffer.style_char(i, style);
                 i += 1;
                 continue;
@@ -59,7 +59,7 @@ impl Highlighter for MatchingBracketsHighlighter {
                 };
 
                 let mut style = Style::default();
-                style.set_forground_color(color);
+                style.set_foreground_color(color);
                 buffer.style_char(i, style);
 
                 i += 1;

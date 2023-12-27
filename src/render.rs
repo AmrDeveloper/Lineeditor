@@ -53,7 +53,7 @@ impl Render {
         Ok(())
     }
 
-    /// Receving the insertion position on buffer and update the position on ui
+    /// Receiving the insertion position on buffer and update the position on ui
     /// by calculating the right position using the promot length
     pub fn update_cursor_position(&mut self, position: u16) -> Result<()> {
         let mut move_to_position = self.start_position.0 + position;
@@ -91,7 +91,7 @@ impl Render {
 
         for (i, style) in styles.iter().enumerate().take(buffer_len) {
             // Set forground Color if exists
-            if let Some(color) = style.forground_color() {
+            if let Some(color) = style.foreground_color() {
                 self.stdout.queue(SetForegroundColor(*color))?;
             }
 

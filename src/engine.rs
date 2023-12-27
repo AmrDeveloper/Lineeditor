@@ -15,6 +15,8 @@ use crate::editor::Editor;
 use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
 use crate::event::MovementCommand;
+use crate::input_filter::filter_input;
+use crate::input_filter::InputFilter;
 use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
@@ -29,10 +31,8 @@ use crate::Render;
 pub enum LineEditorResult {
     /// Entry succeeded with the provided content
     Success(String),
-
     /// Interrupt current editing
     Interrupted,
-
     /// End terminal session
     EndTerminalSession,
 }
@@ -57,6 +57,7 @@ enum EventStatus {
 pub struct LineEditor {
     prompt: Box<dyn Prompt>,
     editor: Editor,
+    input_filter: InputFilter,
     render: Render,
     keybindings: Keybindings,
     auto_pair: Option<Box<dyn AutoPair>>,
@@ -75,6 +76,7 @@ impl LineEditor {
         LineEditor {
             prompt,
             editor: Editor::default(),
+            input_filter: InputFilter::Text,
             render: Render::default(),
             keybindings: Keybindings::default(),
             auto_pair: None,
@@ -105,6 +107,67 @@ impl LineEditor {
         result
     }
 
+    /// Set style for visual selection or NONE to clear it
+    pub fn set_visual_selection_style(&mut self, style: Option<Style>) {
+        self.selection_style = style;
+    }
+
+    /// Get the current Editor
+    pub fn editor(&mut self) -> &mut Editor {
+        &mut self.editor
+    }
+
+    /// Get the current Keybindings
+    pub fn keybinding(&mut self) -> &mut Keybindings {
+        &mut self.keybindings
+    }
+
+    /// Set the current InputFilter type
+    pub fn set_input_filter(&mut self, input_filter: InputFilter) {
+        self.input_filter = input_filter;
+    }
+
+    /// Add Auto pair, or clear it by passing None
+    pub fn set_auto_pair(&mut self, auto_pair: Option<Box<dyn AutoPair>>) {
+        self.auto_pair = auto_pair
+    }
+
+    /// Set the current cursor style
+    /// Or `None` to reset
+    pub fn set_cursor_style(&mut self, style: Option<SetCursorStyle>) {
+        self.cursor_style = style;
+    }
+
+    /// Get the current list of highlighters
+    pub fn highlighters(&mut self) -> &mut Vec<Box<dyn Highlighter>> {
+        &mut self.highlighters
+    }
+
+    /// Add new Syntax highlighter
+    pub fn add_highlighter(&mut self, highlighter: Box<dyn Highlighter>) {
+        self.highlighters.push(highlighter);
+    }
+
+    /// Clear current syntax highlighter
+    pub fn clear_highlighters(&mut self) {
+        self.highlighters.clear();
+    }
+
+    /// Get current hinters
+    pub fn hinters(&mut self) -> &mut Vec<Box<dyn Hinter>> {
+        &mut self.hinters
+    }
+
+    /// Add new Hinter
+    pub fn add_hinter(&mut self, hinter: Box<dyn Hinter>) {
+        self.hinters.push(hinter);
+    }
+
+    /// Clear current hinters
+    pub fn clear_hinters(&mut self) {
+        self.hinters.clear();
+    }
+
     /// Helper implementing the logic for [`LineEditor::read_line()`] to be wrapped
     /// in a `raw_mode` context.
     fn read_line_helper(&mut self) -> Result<LineEditorResult> {
@@ -126,9 +189,11 @@ impl LineEditor {
                                 || key_event.modifiers == KeyModifiers::SHIFT)
                                 && key_event.kind == KeyEventKind::Press
                             {
-                                let edit_command =
-                                    LineEditorEvent::Edit(vec![EditCommand::InsertChar(ch)]);
-                                lineeditor_events.push(edit_command);
+                                if filter_input(ch, &self.input_filter) {
+                                    let commands = vec![EditCommand::InsertChar(ch)];
+                                    let edit_command = LineEditorEvent::Edit(commands);
+                                    lineeditor_events.push(edit_command);
+                                }
                                 break;
                             }
 
@@ -355,61 +420,5 @@ impl LineEditor {
         let position = self.editor.styled_buffer().position() as u16;
         self.selected_start = position;
         self.selected_end = position;
-    }
-
-    /// Set style for visual selection or NONE to clear it
-    pub fn set_visual_selection_style(&mut self, style: Option<Style>) {
-        self.selection_style = style;
-    }
-
-    /// Get the current Editor
-    pub fn editor(&mut self) -> &mut Editor {
-        &mut self.editor
-    }
-
-    /// Get the current Keybindings
-    pub fn keybinding(&mut self) -> &mut Keybindings {
-        &mut self.keybindings
-    }
-
-    /// Add Auto pair, or clear it by passing None
-    pub fn set_auto_pair(&mut self, auto_pair: Option<Box<dyn AutoPair>>) {
-        self.auto_pair = auto_pair
-    }
-
-    /// Set the current cursor style
-    /// Or `None` to reset
-    pub fn set_cursor_style(&mut self, style: Option<SetCursorStyle>) {
-        self.cursor_style = style;
-    }
-
-    /// Get the current list of highlighters
-    pub fn highlighters(&mut self) -> &mut Vec<Box<dyn Highlighter>> {
-        &mut self.highlighters
-    }
-
-    /// Add new Syntax highlighter
-    pub fn add_highlighter(&mut self, highlighter: Box<dyn Highlighter>) {
-        self.highlighters.push(highlighter);
-    }
-
-    /// Clear current syntax highlighter
-    pub fn clear_highlighters(&mut self) {
-        self.highlighters.clear();
-    }
-
-    /// Get current hinters
-    pub fn hinters(&mut self) -> &mut Vec<Box<dyn Hinter>> {
-        &mut self.hinters
-    }
-
-    /// Add new Hinter
-    pub fn add_hinter(&mut self, hinter: Box<dyn Hinter>) {
-        self.hinters.push(hinter);
-    }
-
-    /// Clear current hinters
-    pub fn clear_hinters(&mut self) {
-        self.hinters.clear();
     }
 }
