@@ -47,7 +47,7 @@ pub fn filter_input(ch: char, input_filter: &InputFilter) -> bool {
         InputFilter::Not(filter) => !filter_input(ch, filter),
         InputFilter::Options(input_filters) => {
             for filter in input_filters {
-                if filter_input(ch, &filter) {
+                if filter_input(ch, filter) {
                     return true;
                 }
             }
