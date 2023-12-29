@@ -11,6 +11,7 @@ use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 use crossterm::terminal;
 
+use crate::completion::Suggestion;
 use crate::editor::Editor;
 use crate::event::EditCommand;
 use crate::event::LineEditorEvent;
@@ -20,11 +21,14 @@ use crate::input_filter::InputFilter;
 use crate::keybindings::KeyCombination;
 use crate::keybindings::Keybindings;
 use crate::style::Style;
+use crate::styled_editor_view::StyledEditorView;
 use crate::AutoPair;
+use crate::Completer;
+use crate::DropDownListView;
 use crate::Highlighter;
 use crate::Hinter;
+use crate::ListView;
 use crate::Prompt;
-use crate::Render;
 
 /// A Result can return from`LineEditor::read_line()`
 #[derive(Debug)]
@@ -47,6 +51,8 @@ enum EventStatus {
     MovementHandled,
     /// Selection Event is handled
     SelectionHandled,
+    /// Auto Complete Event is handled
+    AutoCompleteHandled,
     /// Event is in applicable to handle
     Inapplicable,
     /// Exit with Result or Error
@@ -58,11 +64,15 @@ pub struct LineEditor {
     prompt: Box<dyn Prompt>,
     editor: Editor,
     input_filter: InputFilter,
-    render: Render,
+    styled_editor_text: StyledEditorView,
     keybindings: Keybindings,
     auto_pair: Option<Box<dyn AutoPair>>,
     highlighters: Vec<Box<dyn Highlighter>>,
     hinters: Vec<Box<dyn Hinter>>,
+
+    completer: Option<Box<dyn Completer>>,
+    auto_complete_view: Box<dyn ListView<Suggestion>>,
+
     cursor_style: Option<SetCursorStyle>,
     selection_style: Option<Style>,
     selected_start: u16,
@@ -77,11 +87,13 @@ impl LineEditor {
             prompt,
             editor: Editor::default(),
             input_filter: InputFilter::Text,
-            render: Render::default(),
+            styled_editor_text: StyledEditorView::default(),
             keybindings: Keybindings::default(),
             auto_pair: None,
             highlighters: vec![],
             hinters: vec![],
+            completer: None,
+            auto_complete_view: Box::<DropDownListView>::default(),
             cursor_style: None,
             selection_style: None,
             selected_start: 0,
@@ -95,7 +107,7 @@ impl LineEditor {
     /// and the `Ok` variant wraps a [`LineEditorResult`] which handles user inputs.
     pub fn read_line(&mut self) -> Result<LineEditorResult> {
         if let Some(cursor_style) = self.cursor_style {
-            self.render.set_cursor_style(cursor_style)?;
+            self.styled_editor_text.set_cursor_style(cursor_style)?;
         }
 
         terminal::enable_raw_mode()?;
@@ -103,7 +115,8 @@ impl LineEditor {
         terminal::disable_raw_mode()?;
 
         let default_cursor_style = SetCursorStyle::DefaultUserShape;
-        self.render.set_cursor_style(default_cursor_style)?;
+        self.styled_editor_text
+            .set_cursor_style(default_cursor_style)?;
         result
     }
 
@@ -168,19 +181,36 @@ impl LineEditor {
         self.hinters.clear();
     }
 
+    /// Set the current Auto completer
+    pub fn set_completer(&mut self, completer: Box<dyn Completer>) {
+        self.completer = Some(completer);
+    }
+
+    /// Clear current auto completer
+    pub fn clear_completer(&mut self) {
+        self.completer = None
+    }
+
+    /// Set the current Auto Complete View
+    pub fn set_auto_complete_view(&mut self, auto_complete_view: Box<dyn ListView<Suggestion>>) {
+        self.auto_complete_view = auto_complete_view;
+    }
+
     /// Helper implementing the logic for [`LineEditor::read_line()`] to be wrapped
     /// in a `raw_mode` context.
     fn read_line_helper(&mut self) -> Result<LineEditorResult> {
         let mut lineeditor_events: Vec<LineEditorEvent> = vec![];
 
         let prompt_buffer = self.prompt.prompt();
-        let promot_len = prompt_buffer.len() as u16;
+        let prompt_len = prompt_buffer.len() as u16;
 
         let row_start = position().unwrap().1;
-        self.render.set_start_position((promot_len, row_start));
-        self.render.render_prompt_buffer(&prompt_buffer)?;
+        self.styled_editor_text
+            .set_start_position((prompt_len, row_start));
+        self.styled_editor_text
+            .render_prompt_buffer(&prompt_buffer)?;
 
-        loop {
+        'main: loop {
             loop {
                 if let Event::Key(key_event) = event::read()? {
                     match key_event.code {
@@ -220,8 +250,11 @@ impl LineEditor {
             // Apply the list of events
             for event in lineeditor_events.drain(..) {
                 match self.handle_editor_event(&event)? {
+                    EventStatus::AutoCompleteHandled => {
+                        continue 'main;
+                    }
                     EventStatus::Inapplicable => {
-                        continue;
+                        continue 'main;
                     }
                     EventStatus::Exits(result) => return Ok(result),
                     _ => {}
@@ -248,14 +281,14 @@ impl LineEditor {
             self.apply_visual_selection();
 
             // Render the current buffer with style
-            self.render
+            self.styled_editor_text
                 .render_line_buffer(self.editor.styled_buffer())?;
 
             // If cursor is at the end of the buffer, check if hint is available
             if self.editor.styled_buffer().position() == self.editor.styled_buffer().len() {
                 for hinter in &self.hinters {
                     if let Some(hint) = hinter.hint(self.editor.styled_buffer()) {
-                        self.render.render_hint(&hint)?;
+                        self.styled_editor_text.render_hint(&hint)?;
                         break;
                     }
                 }
@@ -281,9 +314,43 @@ impl LineEditor {
                 Ok(EventStatus::MovementHandled)
             }
             LineEditorEvent::Enter => {
+                if self.auto_complete_view.is_visible() {
+                    if let Some(suggestion) = self.auto_complete_view.selected_element() {
+                        let literal = &suggestion.content.literal();
+                        let span = &suggestion.span;
+
+                        let delete_command = EditCommand::DeleteSpan(span.start, span.end);
+                        self.editor.run_edit_commands(&delete_command);
+
+                        let insert_command = EditCommand::InsertString(literal.to_string());
+                        self.editor.run_edit_commands(&insert_command);
+
+                        self.auto_complete_view.clear()?;
+                        self.auto_complete_view.set_visibility(false);
+                        return Ok(EventStatus::SelectionHandled);
+                    }
+                }
+
                 let buffer = self.editor.styled_buffer().buffer().iter().collect();
                 self.reset_selection_range();
                 Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
+            }
+            LineEditorEvent::Up => {
+                if self.auto_complete_view.is_visible() {
+                    self.auto_complete_view.focus_previous();
+                    self.auto_complete_view.render()?;
+                    return Ok(EventStatus::AutoCompleteHandled);
+                }
+                Ok(EventStatus::Inapplicable)
+            }
+            LineEditorEvent::Down => {
+                if self.auto_complete_view.is_visible() {
+                    self.auto_complete_view.focus_next();
+                    self.auto_complete_view.clear()?;
+                    self.auto_complete_view.render()?;
+                    return Ok(EventStatus::AutoCompleteHandled);
+                }
+                Ok(EventStatus::Inapplicable)
             }
             LineEditorEvent::Left => {
                 self.editor
@@ -381,6 +448,46 @@ impl LineEditor {
                 }
                 Ok(EventStatus::Inapplicable)
             }
+            LineEditorEvent::ToggleAutoComplete => {
+                if self.auto_complete_view.is_visible() {
+                    self.auto_complete_view.clear()?;
+                    self.auto_complete_view.set_visibility(false);
+                    return Ok(EventStatus::Inapplicable);
+                }
+
+                if let Some(completer) = &self.completer {
+                    let mut suggestions = completer.complete(self.editor.styled_buffer());
+                    if !suggestions.is_empty() {
+                        let prompt_width = self.prompt.prompt().len() as u16;
+                        let (_, row) = position()?;
+
+                        let mut style = Style::default();
+                        style.set_background_color(crossterm::style::Color::Blue);
+                        self.auto_complete_view.set_focus_style(style);
+
+                        self.auto_complete_view.reset();
+                        self.auto_complete_view.set_elements(&mut suggestions);
+                        self.auto_complete_view.clear()?;
+                        self.auto_complete_view.render()?;
+                        self.auto_complete_view.set_visibility(true);
+
+                        let auto_complete_height = self.auto_complete_view.len();
+                        let (_, max_row) = terminal::size()?;
+
+                        if row + auto_complete_height as u16 > max_row {
+                            let new_start_row = max_row - 2 - self.auto_complete_view.len() as u16;
+                            self.styled_editor_text
+                                .set_start_position((prompt_width, new_start_row));
+                        }
+
+                        return Ok(EventStatus::AutoCompleteHandled);
+                    }
+
+                    return Ok(EventStatus::Inapplicable);
+                }
+
+                Ok(EventStatus::Inapplicable)
+            }
             _ => Ok(EventStatus::Inapplicable),
         }
     }
@@ -409,7 +516,7 @@ impl LineEditor {
 
         let from = usize::min(self.selected_start.into(), self.selected_end.into());
         let to = usize::max(self.selected_start.into(), self.selected_end.into());
-        let delete_selection = EditCommand::DeleteSelected(from, to);
+        let delete_selection = EditCommand::DeleteSpan(from, to);
         self.editor.run_edit_commands(&delete_selection);
         self.editor.styled_buffer().set_position(from);
         self.reset_selection_range();

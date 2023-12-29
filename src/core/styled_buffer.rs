@@ -21,6 +21,15 @@ impl Default for StyledBuffer {
     }
 }
 
+/// Create instance of StyledBuffer from String
+impl From<&str> for StyledBuffer {
+    fn from(value: &str) -> Self {
+        let mut styled_buffer = StyledBuffer::default();
+        styled_buffer.insert_string(value);
+        styled_buffer
+    }
+}
+
 impl StyledBuffer {
     /// Insert character at the current position with default style
     pub fn insert_char(&mut self, ch: char) {
@@ -135,12 +144,19 @@ impl StyledBuffer {
         if to <= self.len() {
             self.buffer.drain(from..to);
             self.styles.drain(from..to);
+            self.cursor_position = from;
         }
     }
 
     /// Get current Buffer
     pub fn buffer(&mut self) -> &Vec<char> {
         &self.buffer
+    }
+
+    /// Get the literal value of StyledBuffer without styles
+    pub fn literal(&self) -> String {
+        let literal: &String = &self.buffer.clone().into_iter().collect();
+        literal.to_string()
     }
 
     /// Get char at position
@@ -158,7 +174,7 @@ impl StyledBuffer {
     }
 
     /// Return the last keyword that contains alphabetic characters on the buffer or None
-    pub fn last_alphabetic_keyword(&mut self) -> Option<String> {
+    pub fn last_alphabetic_keyword(&self) -> Option<String> {
         let mut keyword = String::new();
 
         for c in self.buffer.iter().rev() {
@@ -182,6 +198,14 @@ impl StyledBuffer {
         &self.styles
     }
 
+    /// Update the current list of styles
+    pub fn set_styles(&mut self, styles: &mut Vec<Style>) {
+        if self.len() == styles.len() {
+            self.styles.clear();
+            self.styles.append(styles);
+        }
+    }
+
     /// Set style for one character
     pub fn style_char(&mut self, position: usize, style: Style) {
         self.styles[position] = style;
@@ -191,6 +215,13 @@ impl StyledBuffer {
     pub fn style_range(&mut self, start: usize, end: usize, style: Style) {
         let max = std::cmp::min(end, self.styles.len());
         for i in start..max {
+            self.styles[i] = style.clone();
+        }
+    }
+
+    /// Set one style for all characters
+    pub fn style_all(&mut self, style: Style) {
+        for i in 0..self.len() {
             self.styles[i] = style.clone();
         }
     }

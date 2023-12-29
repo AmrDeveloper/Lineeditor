@@ -15,8 +15,8 @@ pub enum EditCommand {
     /// Delete in-place from the current insertion point
     DeleteRightChar,
 
-    /// Delete in-place the current selected range
-    DeleteSelected(usize, usize),
+    /// Delete in-place range
+    DeleteSpan(usize, usize),
 
     /// Clear the current buffer
     Clear,
@@ -103,4 +103,7 @@ pub enum LineEditorEvent {
 
     /// Delete char from the right or delete selected range
     Delete,
+
+    /// Show or Hide Auto Complete view depend on the state
+    ToggleAutoComplete,
 }

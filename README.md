@@ -16,6 +16,10 @@ A new cross platform Line editor implementation inspired by reedline, rustyline 
   <img src="media/line_editor_demo.gif" alt="animated" width="100%"/>
 </p>
 
+<p align="center">
+  <img src="media/auto_complete_demo.gif" alt="animated" width="100%"/>
+</p>
+
 > [!IMPORTANT]
 > LineEditor API is still experimental and may be changed from version to version until finishing the design and implementations of the basics features
 
@@ -38,6 +42,7 @@ match line_editor.read_line() {
 - [Cursor style](/examples/cursor_style.rs)
 - [Input Filter](/examples/input_filter.rs)
 - [Key bindings](/examples/key_bindings.rs)
+- [DropDown AutoComplete](/examples/drop_down_auto_complete.rs)
 - [Keywords Highlighter](/examples/keyword_highlighter.rs)
 - [Matching Brackets Highlighter](/examples/matching_brackets_highlighter.rs)
 - [Hex Color Highlighter](/examples/hex_color_highlighter.rs)
