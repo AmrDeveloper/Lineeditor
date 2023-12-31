@@ -311,16 +311,13 @@ impl LineEditor {
             LineEditorEvent::Edit(commands) => {
                 for command in commands {
                     if self.enable_surround_selection && self.selected_start != self.selected_end {
-                        match &command {
-                            EditCommand::InsertChar(c) => {
-                                for (key, value) in DEFAULT_PAIRS {
-                                    if key == c {
-                                        self.apply_surround_selection(*key, *value);
-                                        return Ok(EventStatus::EditHandled);
-                                    }
+                        if let EditCommand::InsertChar(c) = &command {
+                            for (key, value) in DEFAULT_PAIRS {
+                                if key == c {
+                                    self.apply_surround_selection(*key, *value);
+                                    return Ok(EventStatus::EditHandled);
                                 }
                             }
-                            _ => {}
                         }
                     }
                     self.editor.run_edit_commands(command);
