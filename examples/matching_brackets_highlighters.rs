@@ -75,6 +75,9 @@ fn main() {
     let mut line_editor = LineEditor::new(Box::new(prompt));
     line_editor.add_highlighter(Box::<MatchingBracketsHighlighter>::default());
 
+    let bindings = line_editor.keybinding();
+    bindings.register_common_control_bindings();
+
     match line_editor.read_line() {
         Ok(LineEditorResult::Success(line)) => {
             println!("Line {}", line);

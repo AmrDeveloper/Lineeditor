@@ -74,6 +74,9 @@ fn main() {
     let prompt = StringPrompt::new("prompt> ".to_string());
     let mut line_editor = LineEditor::new(Box::new(prompt));
 
+    let bindings = line_editor.keybinding();
+    bindings.register_common_control_bindings();
+
     line_editor.add_highlighter(Box::<GitQLHighlighter>::default());
 
     match line_editor.read_line() {
