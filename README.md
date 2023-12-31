@@ -49,6 +49,7 @@ match line_editor.read_line() {
 - [Keywords Hinter](/examples/keyword_hinter.rs)
 - [Auto Pair complete](/examples/auto_pair.rs)
 - [Visual Selection](/examples/visual_selection.rs)
+- [Auto Surround Selection](/examples/surround_selection.rs)
 
 ### License
 ```

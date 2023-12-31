@@ -29,6 +29,7 @@ use crate::Highlighter;
 use crate::Hinter;
 use crate::ListView;
 use crate::Prompt;
+use crate::DEFAULT_PAIRS;
 
 /// A Result can return from`LineEditor::read_line()`
 #[derive(Debug)]
@@ -77,6 +78,7 @@ pub struct LineEditor {
     selection_style: Option<Style>,
     selected_start: u16,
     selected_end: u16,
+    enable_surround_selection: bool,
 }
 
 impl LineEditor {
@@ -95,9 +97,11 @@ impl LineEditor {
             completer: None,
             auto_complete_view: Box::<DropDownListView>::default(),
             cursor_style: None,
+
             selection_style: None,
             selected_start: 0,
             selected_end: 0,
+            enable_surround_selection: false,
         }
     }
 
@@ -194,6 +198,11 @@ impl LineEditor {
     /// Set the current Auto Complete View
     pub fn set_auto_complete_view(&mut self, auto_complete_view: Box<dyn ListView<Suggestion>>) {
         self.auto_complete_view = auto_complete_view;
+    }
+
+    /// Enable or Disable surround selection feature
+    pub fn enable_surround_selection(&mut self, enable: bool) {
+        self.enable_surround_selection = enable;
     }
 
     /// Helper implementing the logic for [`LineEditor::read_line()`] to be wrapped
@@ -301,6 +310,19 @@ impl LineEditor {
         match event {
             LineEditorEvent::Edit(commands) => {
                 for command in commands {
+                    if self.enable_surround_selection && self.selected_start != self.selected_end {
+                        match &command {
+                            EditCommand::InsertChar(c) => {
+                                for (key, value) in DEFAULT_PAIRS {
+                                    if key == c {
+                                        self.apply_surround_selection(*key, *value);
+                                        return Ok(EventStatus::EditHandled);
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
                     self.editor.run_edit_commands(command);
                 }
                 self.reset_selection_range();
@@ -506,6 +528,19 @@ impl LineEditor {
             let to = usize::max(self.selected_start.into(), self.selected_end.into());
             styled_buffer.style_range(from, to, style.clone());
         }
+    }
+
+    /// Apply surround selection on the current styled buffer
+    fn apply_surround_selection(&mut self, start: char, end: char) {
+        let from = usize::min(self.selected_start.into(), self.selected_end.into());
+        let to = usize::max(self.selected_start.into(), self.selected_end.into());
+
+        let editor = self.editor.styled_buffer();
+        editor.set_position(from);
+        editor.insert_char(start);
+        editor.set_position(to + 1);
+        editor.insert_char(end);
+        editor.set_position(from);
     }
 
     /// Delete the current selected text
