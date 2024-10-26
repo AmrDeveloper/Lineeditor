@@ -1,3 +1,4 @@
+use std::io::stdout;
 use std::io::Result;
 
 use clipboard::ClipboardContext;
@@ -5,10 +6,20 @@ use clipboard::ClipboardProvider;
 use crossterm::cursor::position;
 use crossterm::cursor::SetCursorStyle;
 use crossterm::event;
+use crossterm::event::DisableBracketedPaste;
+use crossterm::event::DisableFocusChange;
+use crossterm::event::DisableMouseCapture;
+use crossterm::event::EnableBracketedPaste;
+use crossterm::event::EnableFocusChange;
+use crossterm::event::EnableMouseCapture;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
+use crossterm::event::KeyboardEnhancementFlags;
+use crossterm::event::PopKeyboardEnhancementFlags;
+use crossterm::event::PushKeyboardEnhancementFlags;
+use crossterm::execute;
 use crossterm::terminal;
 
 use crate::completion::Suggestion;
@@ -115,8 +126,28 @@ impl LineEditor {
         }
 
         terminal::enable_raw_mode()?;
+        execute!(
+            stdout(),
+            EnableBracketedPaste,
+            EnableFocusChange,
+            EnableMouseCapture,
+            PushKeyboardEnhancementFlags(
+                KeyboardEnhancementFlags::DISAMBIGUATE_ESCAPE_CODES
+                    | KeyboardEnhancementFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+                    | KeyboardEnhancementFlags::REPORT_EVENT_TYPES
+            )
+        )?;
+
         let result = self.read_line_helper();
+
         terminal::disable_raw_mode()?;
+        execute!(
+            stdout(),
+            DisableBracketedPaste,
+            PopKeyboardEnhancementFlags,
+            DisableFocusChange,
+            DisableMouseCapture
+        )?;
 
         let default_cursor_style = SetCursorStyle::DefaultUserShape;
         self.styled_editor_text
@@ -221,8 +252,8 @@ impl LineEditor {
 
         'main: loop {
             loop {
-                if let Event::Key(key_event) = event::read()? {
-                    match key_event.code {
+                match event::read()? {
+                    Event::Key(key_event) => match key_event.code {
                         KeyCode::Char(ch) => {
                             if (key_event.modifiers == KeyModifiers::NONE
                                 || key_event.modifiers == KeyModifiers::SHIFT)
@@ -249,7 +280,14 @@ impl LineEditor {
                                 break;
                             }
                         }
+                    },
+                    Event::Paste(string) => {
+                        lineeditor_events.push(LineEditorEvent::Edit(vec![
+                            EditCommand::InsertString(string),
+                        ]));
+                        break;
                     }
+                    _ => {}
                 }
             }
 
@@ -457,16 +495,14 @@ impl LineEditor {
             LineEditorEvent::Paste => {
                 let mut clipboard_context: ClipboardContext = ClipboardProvider::new().unwrap();
                 let clipboard_contents = clipboard_context.get_contents();
-                if clipboard_contents.is_ok() {
+                if let Ok(content) = clipboard_contents {
                     if self.selected_start != self.selected_end {
                         self.delete_selected_text();
                     }
 
-                    if let Ok(content) = clipboard_contents {
-                        self.editor
-                            .run_edit_commands(&EditCommand::InsertString(content));
-                        return Ok(EventStatus::GeneralHandled);
-                    }
+                    self.editor
+                        .run_edit_commands(&EditCommand::InsertString(content));
+                    return Ok(EventStatus::GeneralHandled);
                 }
                 Ok(EventStatus::Inapplicable)
             }
