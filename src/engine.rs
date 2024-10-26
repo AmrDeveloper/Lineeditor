@@ -352,6 +352,9 @@ impl LineEditor {
 
                 let buffer = self.editor.styled_buffer().buffer().iter().collect();
                 self.reset_selection_range();
+
+                self.editor.styled_buffer().clear();
+
                 Ok(EventStatus::Exits(LineEditorResult::Success(buffer)))
             }
             LineEditorEvent::Up => {

@@ -1,13 +1,13 @@
 [package]
 name = "lineeditor"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 repository = "https://github.com/amrdeveloper/lineeditor"
 license = "MIT"
 authors = ["AmrDeveloper"]
-description = "A cross platform line editor"
+description = "A cross platform rich line editor"
 readme = "README.md"
-keywords = ["line-editor", "gitql"]
+keywords = ["line-editor", "gitql", "cli", "rich-editor"]
 categories = ["command-line-utilities"]
 
 [lib]
