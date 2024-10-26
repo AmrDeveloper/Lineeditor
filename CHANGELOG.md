@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+Version 0.3.0 *(2024-10-26)*
+-----------------------------
+
+* Update Crossterm version.
+* Fix clearing the buffer after success command.
+
 Version 0.2.0 *(2023-12-29)*
 -----------------------------
 
